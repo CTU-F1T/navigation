@@ -44,8 +44,8 @@ class MapGenerator
 {
 
   public:
-    MapGenerator(const std::string& mapname, int threshold_occupied = 100, int threshold_free = 0)
-      : mapname_(mapname), saved_map_(false), threshold_occupied_(threshold_occupied), threshold_free_(threshold_free)
+    MapGenerator(const std::string& mapname, int threshold_occupied = 100, int threshold_free = 0, const std::string& mode = "trinary")
+      : mapname_(mapname), saved_map_(false), threshold_occupied_(threshold_occupied), threshold_free_(threshold_free), mode_(mode)
     {
       ros::NodeHandle n;
       ROS_INFO("Waiting for the map");
@@ -74,12 +74,16 @@ class MapGenerator
       for(unsigned int y = 0; y < map->info.height; y++) {
         for(unsigned int x = 0; x < map->info.width; x++) {
           unsigned int i = x + (map->info.height - y - 1) * map->info.width;
-          if (map->data[i] >= 0 && map->data[i] <= threshold_free_) { //occ [0,0.1)
-            fputc(254, out);
-          } else if (map->data[i] <= 100 && map->data[i] >= threshold_occupied_) { //occ (0.65,1]
-            fputc(000, out);
-          } else { //occ [0.1,0.65]
-            fputc(205, out);
+          if (mode_ == "trinary") {
+            if (map->data[i] >= 0 && map->data[i] <= threshold_free_) { //occ [0,0.1)
+              fputc(254, out);
+            } else if (map->data[i] <= 100 && map->data[i] >= threshold_occupied_) { //occ (0.65,1]
+              fputc(000, out);
+            } else { //occ [0.1,0.65]
+              fputc(205, out);
+            }
+          } else if (mode_ == "raw") {
+            fputc(map->data[i], out);
           }
         }
       }
@@ -112,8 +116,8 @@ free_thresh: 0.196
       double yaw, pitch, roll;
       mat.getEulerYPR(yaw, pitch, roll);
 
-      fprintf(yaml, "image: %s\nresolution: %f\norigin: [%f, %f, %f]\nnegate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.196\n\n",
-              mapdatafile.c_str(), map->info.resolution, map->info.origin.position.x, map->info.origin.position.y, yaw);
+      fprintf(yaml, "image: %s\nresolution: %f\norigin: [%f, %f, %f]\nnegate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.196\nmode: %s\n\n",
+              mapdatafile.c_str(), map->info.resolution, map->info.origin.position.x, map->info.origin.position.y, yaw, mode_.c_str());
 
       fclose(yaml);
 
@@ -126,12 +130,13 @@ free_thresh: 0.196
     bool saved_map_;
     int threshold_occupied_;
     int threshold_free_;
+    std::string mode_;
 
 };
 
 #define USAGE "Usage: \n" \
               "  map_saver -h\n"\
-              "  map_saver [--occ <threshold_occupied>] [--free <threshold_free>] [-f <mapname>] [ROS remapping args]"
+              "  map_saver [--occ <threshold_occupied>] [--free <threshold_free>] [-f <mapname>] [--mode trinary|raw] [ROS remapping args]"
 
 int main(int argc, char** argv)
 {
@@ -139,6 +144,7 @@ int main(int argc, char** argv)
   std::string mapname = "map";
   int threshold_occupied = 100;
   int threshold_free = 0;
+  std::string mode = "trinary";
 
   for(int i=1; i<argc; i++)
   {
@@ -193,6 +199,22 @@ int main(int argc, char** argv)
         return 1;
       }
     }
+    else if (!strcmp(argv[i], "--mode"))
+    {
+      if (++i < argc)
+      {
+        mode = argv[i];
+        if (!(mode == "trinary" || mode == "raw")) {
+          ROS_ERROR("mode must be trinary or raw");
+          return 1;
+        }
+      }
+      else
+      {
+        puts(USAGE);
+        return 1;
+      }
+    }
     else
     {
       puts(USAGE);
@@ -206,7 +228,7 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  MapGenerator mg(mapname, threshold_occupied, threshold_free);
+  MapGenerator mg(mapname, threshold_occupied, threshold_free, mode);
 
   while(!mg.saved_map_ && ros::ok())
     ros::spinOnce();

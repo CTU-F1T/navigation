@@ -164,8 +164,8 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "map_saver");
   std::string mapname = "map";
-  int threshold_occupied = 100;
-  int threshold_free = 0;
+  int threshold_occupied = 65;
+  int threshold_free = 25;
   std::string mode = "trinary";
   bool negate = false;
 

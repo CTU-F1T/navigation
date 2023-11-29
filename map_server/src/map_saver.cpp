@@ -137,8 +137,8 @@ free_thresh: 0.196
         i_negate = 1;
       }
 
-      fprintf(yaml, "image: %s\nresolution: %f\norigin: [%f, %f, %f]\nnegate: %d\noccupied_thresh: 0.65\nfree_thresh: 0.196\nmode: %s\n\n",
-              mapdatafile.c_str(), map->info.resolution, map->info.origin.position.x, map->info.origin.position.y, yaw, i_negate, mode_.c_str());
+      fprintf(yaml, "image: %s\nresolution: %f\norigin: [%f, %f, %f]\nnegate: %d\noccupied_thresh: %.3f\nfree_thresh: %.3f\nmode: %s\n\n",
+              mapdatafile.c_str(), map->info.resolution, map->info.origin.position.x, map->info.origin.position.y, yaw, i_negate, threshold_occupied_ / 100.0, threshold_free_ / 100.0, mode_.c_str());
 
       fclose(yaml);
 
